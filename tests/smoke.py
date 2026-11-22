@@ -17,12 +17,17 @@ BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:7023").rstrip("/
 USER = os.environ.get("SHOWCASE_TEST_USER", "admin")
 PW = os.environ.get("SHOWCASE_TEST_PASS", "")
 _cookie = ""
+_heads = {}
 _failed = []
 
 
 def call(path, data=None, ctype=None, method=None):
     req = urllib.request.Request(BASE + path, data=data,
                                  method=method or ("POST" if data is not None else "GET"))
+    # 手机浏览器 UA：套 Cloudflare 的实例会按指纹拦掉 Python-urllib 默认头
+    req.add_header("User-Agent",
+                   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) "
+                   "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1")
     if ctype:
         req.add_header("Content-Type", ctype)
     if _cookie:
@@ -33,9 +38,17 @@ def call(path, data=None, ctype=None, method=None):
             sc = r.headers.get("Set-Cookie")
             if sc:
                 globals()["_cookie"] = sc.split(";")[0]
+            _heads[path] = r.headers
             return r.status, body
     except urllib.error.HTTPError as e:
+        _heads[path] = e.headers
         return e.code, e.read()
+
+
+def head(path, **kw):
+    """返回该路径最后一次响应的响应头。"""
+    call(path, **kw)
+    return _heads.get(path, {})
 
 
 def jget(path, **kw):
@@ -156,6 +169,10 @@ if image_id:
     check("图注里的 HTML 被转义", b"<script>x</script>" not in body and b"&lt;script&gt;" in body)
 st, _ = call(f"/qr/{slug}.png")
 check("草稿没有二维码", st == 404, f"实际 {st}")
+# Cloudflare 会把 .png 按源站头缓存，草稿期的 404 一旦被缓存，发布后还要挡几分钟
+check("二维码 404 带 no-store", "no-store" in head(f"/qr/{slug}.png").get("Cache-Control", ""))
+check("页面 404 带 no-store", "no-store" in head("/p/smoke-does-not-exist").get("Cache-Control", ""))
+check("SVG 404 带 no-store", "no-store" in head(f"/qr/{slug}.svg").get("Cache-Control", ""))
 
 # 5. 发布后一切对外可见
 st, out = jget(f"/admin/api/pages/{pid}/status", data=json.dumps({"published": True}).encode(),

@@ -585,20 +585,25 @@ a{color:#2b7fd4}</style></head><body><div>
 </div></body></html>"""
 
 
+_NO_STORE = {"Cache-Control": "no-store"}
+
+
 @app.exception_handler(404)
 def not_found(request: Request, exc):
+    # 错误页必须禁止缓存：Cloudflare 会照源站头缓存 5 分钟，
+    # 否则页面刚发布时，草稿期产生的 404 还会继续挡住客人
     if request.url.path.startswith(("/admin", "/api")):
-        return JSONResponse({"detail": "不存在"}, status_code=404)
-    return HTMLResponse(_NOT_FOUND_HTML, status_code=404)
+        return JSONResponse({"detail": "不存在"}, status_code=404, headers=_NO_STORE)
+    return HTMLResponse(_NOT_FOUND_HTML, status_code=404, headers=_NO_STORE)
 
 
 @app.exception_handler(403)
 def forbidden(request: Request, exc):
-    return JSONResponse({"detail": "没有权限"}, status_code=403)
+    return JSONResponse({"detail": "没有权限"}, status_code=403, headers=_NO_STORE)
 
 
 @app.exception_handler(Exception)
 def unhandled(request: Request, exc):
     # 只回 500，不把异常细节透给客人
     print(f"[showcase] 未处理异常 {request.method} {request.url.path}: {exc!r}")
-    return JSONResponse({"detail": "服务暂时有问题，请稍后再试"}, status_code=500)
+    return JSONResponse({"detail": "服务暂时有问题，请稍后再试"}, status_code=500, headers=_NO_STORE)
