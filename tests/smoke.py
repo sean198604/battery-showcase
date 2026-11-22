@@ -240,6 +240,8 @@ check("未填分组时以网址标识自成一组",
 st, auto2 = jget(f"/admin/api/pages/{auto['id']}/duplicate",
                  data=json.dumps({"lang": "de", "title": f"SMOKE Auto DE {tag}"}).encode(),
                  ctype="application/json")
+jget(f"/admin/api/pages/{auto['id']}/status", data=json.dumps({"published": True}).encode(),
+     ctype="application/json")
 jget(f"/admin/api/pages/{auto2['id']}/status", data=json.dumps({"published": True}).encode(),
      ctype="application/json")
 jget(f"/admin/api/pages/{auto['id']}", data=json.dumps({"subtitle": "touched"}).encode(),
