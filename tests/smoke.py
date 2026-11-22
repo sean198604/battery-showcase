@@ -232,6 +232,27 @@ jget(f"/admin/api/pages/{cid}/status", data=json.dumps({"published": True}).enco
 st, body = call(f"/p/{slug}")
 check("同组页面出多语言切换", st == 200 and b'class="langs"' in body, f"实际 {st}")
 
+# 6b. 不填分组标识：应自成一组，复制后仍能互相切换，保存也不该把分组清空
+st, auto = jget("/admin/api/pages", data=json.dumps({"title": f"SMOKE Auto {tag}"}).encode(),
+                ctype="application/json")
+check("未填分组时以网址标识自成一组",
+      st == 200 and auto.get("group_key") == auto.get("slug"), f"实际 {str(auto)[:120]}")
+st, auto2 = jget(f"/admin/api/pages/{auto['id']}/duplicate",
+                 data=json.dumps({"lang": "de", "title": f"SMOKE Auto DE {tag}"}).encode(),
+                 ctype="application/json")
+jget(f"/admin/api/pages/{auto2['id']}/status", data=json.dumps({"published": True}).encode(),
+     ctype="application/json")
+jget(f"/admin/api/pages/{auto['id']}", data=json.dumps({"subtitle": "touched"}).encode(),
+     ctype="application/json", method="PUT")
+st, again = jget(f"/admin/api/pages/{auto['id']}")
+check("保存时不带分组字段不会清空分组",
+      st == 200 and again["page"].get("group_key") == auto["slug"],
+      f"实际 {again['page'].get('group_key')!r}")
+st, body = call(f"/p/{auto2['slug']}")
+check("自动分组的复制页也出语言切换", st == 200 and b'class="langs"' in body, f"实际 {st}")
+jget(f"/admin/api/pages/{auto2['id']}", method="DELETE")
+jget(f"/admin/api/pages/{auto['id']}", method="DELETE")
+
 # 同语言的第二个页面发布后，两页之间应有上下条
 st, third = jget("/admin/api/pages", data=json.dumps({
     "title": f"SMOKE R03 {tag}", "lang": "en", "group_key": f"smoke-{tag}", "sort_order": 2,

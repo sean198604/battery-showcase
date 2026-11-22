@@ -404,12 +404,15 @@ def create_page(request: Request, body: dict):
     meta = page_meta(body)
     slug = body.get("slug") or make_slug(meta["title"], meta["lang"])
     slug = _unique_slug(str(slug))
+    # 分组决定页间是否互相出现语言切换：不填就自成一组，
+    # 这样"复制为新语言"天然落在同一组里，不必让操作员理解分组概念
+    group = meta["group_key"] or slug
     now = db.now()
     page_id = db.execute(
         "INSERT INTO pages (slug, status, created_at, updated_at, title, subtitle, lang, group_key,"
         " sort_order, header_text, footer_text, contact_text, cover_image) "
         "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (slug, now, now, meta["title"], meta["subtitle"], meta["lang"], meta["group_key"],
+        (slug, now, now, meta["title"], meta["subtitle"], meta["lang"], group,
          meta["sort_order"], meta["header_text"], meta["footer_text"], meta["contact_text"],
          meta["cover_image"]),
     )
@@ -449,7 +452,8 @@ def update_page(request: Request, page_id: int, body: dict):
     db.execute(
         "UPDATE pages SET slug=?, title=?, subtitle=?, lang=?, group_key=?, sort_order=?,"
         " header_text=?, footer_text=?, contact_text=?, cover_image=?, updated_at=? WHERE id=?",
-        (slug, meta["title"], meta["subtitle"], meta["lang"], meta["group_key"], meta["sort_order"],
+        (slug, meta["title"], meta["subtitle"], meta["lang"],
+         meta["group_key"] or page["group_key"] or slug, meta["sort_order"],
          meta["header_text"], meta["footer_text"], meta["contact_text"], meta["cover_image"],
          db.now(), page_id),
     )
