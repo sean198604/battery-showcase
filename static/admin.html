@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>展示页后台</title>
+<style>
+:root{--blue:#2b7fd4;--ink:#22303c;--mut:#6b7783;--line:#e2e7ec;--bg:#f4f6f8;--ok:#1c9a56;--warn:#b8860b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--blue)}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;color:var(--ink)}
+.btn:hover{border-color:#c3ccd6;background:#fbfcfd}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.pri:hover{background:#2270bd}
+.btn.dan{color:#c0392b;border-color:#f0cfcf}
+.btn.sm{padding:4px 9px;font-size:13px;border-radius:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--line);
+ border-radius:8px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid #cfe3f7;border-color:var(--blue)}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+label{display:block;font-size:13px;color:var(--mut);margin:14px 0 5px}
+label:first-child{margin-top:0}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>*{flex:1;min-width:150px}
+.hint{font-size:12px;color:var(--mut);margin:5px 0 0}
+/* 登录 */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+#login .card{width:340px}
+#login h1{font-size:19px;margin:0 0 4px}
+/* 外壳 */
+header.top{background:#fff;border-bottom:1px solid var(--line);padding:0 16px;display:flex;
+ align-items:center;gap:16px;height:54px;position:sticky;top:0;z-index:20}
+.brand{font-weight:700;font-size:16px;white-space:nowrap}
+nav{display:flex;gap:4px;flex:1;overflow:auto}
+nav button{border:0;background:none;padding:16px 12px;color:var(--mut);border-bottom:2px solid transparent;
+ white-space:nowrap}
+nav button.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+main{max-width:1240px;margin:0 auto;padding:18px 16px 80px}
+.badge{display:inline-block;font-size:12px;padding:2px 9px;border-radius:11px;background:#e9eef4;color:#4a5866}
+.badge.pub{background:#e3f6ea;color:var(--ok)}
+.badge.draft{background:#fdf3e0;color:var(--warn)}
+/* 列表 */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
+.pcard{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;
+ flex-direction:column}
+.pcard .cov{height:96px;background:#eef1f4 url('') center/cover no-repeat}
+.pcard .bd{padding:12px 14px;flex:1}
+.pcard h3{margin:0 0 4px;font-size:16px;line-height:1.35;word-break:break-word}
+.pcard .meta{font-size:12px;color:var(--mut);word-break:break-all}
+.pcard .acts{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.empty{padding:44px 16px;text-align:center;color:var(--mut)}
+/* 编辑 */
+#view-edit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:960px){#view-edit{grid-template-columns:1fr}}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px}
+.panel>.ph{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;display:flex;
+ align-items:center;justify-content:space-between;gap:10px}
+.panel>.pb{padding:16px}
+#pvwrap{position:sticky;top:70px}
+iframe#pv{width:100%;height:min(76vh,760px);border:0;background:#fff;border-radius:0 0 10px 10px}
+.blk{border:1px solid var(--line);border-radius:9px;margin-bottom:10px;background:#fcfdfe}
+.blk>.bh{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);
+ background:#fff;border-radius:9px 9px 0 0}
+.blk>.bh .t{font-size:13px;font-weight:600;color:#3c4a58;flex:1}
+.blk>.bb{padding:12px}
+.blk .ctl{display:flex;gap:6px}
+.addbar{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 14px}
+.kv{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.kv input{flex:1}
+.kv .x{flex:0 0 auto}
+.thumb{max-width:100%;max-height:190px;border-radius:8px;border:1px solid var(--line);display:block;
+ margin-bottom:8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 16px;border-top:1px solid
+ var(--line);position:sticky;bottom:0;background:#fff;border-radius:0 0 10px 10px}
+/* 图片库 */
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+.icell{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.icell img{width:100%;height:110px;object-fit:cover;display:block;background:#eef1f4}
+.icell .n{font-size:11px;color:var(--mut);padding:6px 8px 0;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.icell .u{font-size:11px;color:#9aa6b1;padding:0 8px}
+.icell .a{padding:8px}
+/* 弹窗 / 提示 */
+#mask{position:fixed;inset:0;background:rgba(24,34,44,.45);display:flex;align-items:center;
+ justify-content:center;padding:18px;z-index:60}
+#modal{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:88vh;overflow:auto}
+#modal .mh{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;display:flex;
+ justify-content:space-between;align-items:center}
+#modal .mb{padding:18px}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#22303c;color:#fff;
+ padding:10px 18px;border-radius:22px;font-size:14px;z-index:90;opacity:0;transition:.25s;pointer-events:none}
+#toast.on{opacity:1}
+#toast.err{background:#c0392b}
+.qbox{text-align:center}
+.qbox img{width:230px;height:230px;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff}
+.urlline{display:flex;gap:6px;margin:10px 0}
+.urlline input{font-size:13px;background:#f7f9fb}
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden">
+  <form class="card" id="loginForm">
+    <h1>展示页后台</h1>
+    <p class="hint">二维码图文展示平台</p>
+    <label>用户名</label>
+    <input id="lu" autocomplete="username" required>
+    <label>密码</label>
+    <input id="lp" type="password" autocomplete="current-password" required>
+    <button class="btn pri" style="width:100%;margin-top:16px" id="loginBtn">登录</button>
+    <div id="loginErr" class="hint" style="color:#c0392b"></div>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="brand">展示页后台</div>
+    <nav>
+      <button data-v="list" class="on">页面</button>
+      <button data-v="images">图片库</button>
+      <button data-v="account">账号</button>
+    </nav>
+    <span id="who" class="hint"></span>
+    <button class="btn sm" id="logoutBtn">退出</button>
+  </header>
+
+  <main>
+    <!-- 页面列表 -->
+    <section id="view-list">
+      <div class="row" style="align-items:flex-end">
+        <div style="flex:2">
+          <input id="search" placeholder="搜索标题 / 网址标识 / 分组">
+        </div>
+        <div><button class="btn pri" id="newBtn">+ 新建展示页</button></div>
+      </div>
+      <div id="listInfo" class="hint" style="margin-top:10px"></div>
+      <div id="pgrid" class="pgrid"></div>
+    </section>
+
+    <!-- 编辑器 -->
+    <section id="view-edit" class="hidden">
+      <div>
+        <div class="panel">
+          <div class="ph">页面信息
+            <span id="editBadge" class="badge draft">草稿</span>
+          </div>
+          <div class="pb">
+            <label>标题（客人看到的页面大标题）</label>
+            <input id="f_title" maxlength="200">
+            <div class="row">
+              <div><label>网址标识（二维码里的短地址，只用字母数字和 -）</label>
+                <input id="f_slug" maxlength="48"></div>
+              <div style="flex:0 0 130px"><label>语言</label><select id="f_lang"></select></div>
+            </div>
+            <label>副标题 / 型号说明</label>
+            <input id="f_subtitle" maxlength="300">
+            <label>页眉小字（如产品类目：Carbon Zn/MnO2 Battery）</label>
+            <input id="f_header" maxlength="120">
+            <div class="row">
+              <div><label>分组标识（同组页面才有上下条和多语言切换）</label>
+                <input id="f_group" maxlength="60"></div>
+              <div style="flex:0 0 130px"><label>组内顺序</label>
+                <input id="f_sort" type="number" min="0" step="1"></div>
+            </div>
+            <label>封面图</label>
+            <div id="coverBox"></div>
+            <label>页脚说明</label>
+            <textarea id="f_footer" style="min-height:70px"></textarea>
+            <label>联系方式</label>
+            <textarea id="f_contact" style="min-height:70px"></textarea>
+            <p class="hint">正文里可以写 **加粗**、以 - 开头的列表、以 ## 开头的小标题，空行分段。</p>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:16px">
+          <div class="ph">正文内容<span id="blkCount" class="hint"></span></div>
+          <div class="pb">
+            <div class="addbar">
+              <button class="btn sm" data-add="text">+ 文本</button>
+              <button class="btn sm" data-add="heading">+ 小标题</button>
+              <button class="btn sm" data-add="image">+ 图片</button>
+              <button class="btn sm" data-add="specs">+ 参数表</button>
+              <button class="btn sm" data-add="note">+ 提示框</button>
+              <button class="btn sm" data-add="divider">+ 分隔线</button>
+            </div>
+            <div id="blocks"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:16px">
+          <div class="actions">
+            <button class="btn pri" id="saveBtn">保存</button>
+            <button class="btn" id="pubBtn">发布</button>
+            <button class="btn" id="qrBtn">二维码</button>
+            <button class="btn" id="dupBtn">复制为新语言</button>
+            <button class="btn dan" id="delBtn">删除本页</button>
+            <span id="saveState" class="hint"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="pvwrap">
+        <div class="ph">手机预览
+          <a id="openPv" href="#" target="_blank" class="btn sm" style="text-decoration:none">新窗口打开</a>
+        </div>
+        <iframe id="pv" title="预览"></iframe>
+      </div>
+    </section>
+
+    <!-- 图片库 -->
+    <section id="view-images" class="hidden">
+      <div class="row" style="align-items:center">
+        <div><button class="btn pri" id="pickUpload">上传新图片</button></div>
+        <div><span id="storageInfo" class="hint"></span></div>
+      </div>
+      <p class="hint">上传的图片会另存一份适合手机加载的压缩版本，原图保留用于下载。</p>
+      <div id="igrid" class="igrid"></div>
+    </section>
+
+    <!-- 账号 -->
+    <section id="view-account" class="hidden">
+      <div class="panel"><div class="ph">修改密码</div><div class="pb">
+        <form id="pwForm" style="max-width:360px">
+          <label>原密码</label><input id="pw_old" type="password" required>
+          <label>新密码（至少 8 位）</label><input id="pw_new" type="password" required minlength="8">
+          <button class="btn pri" style="margin-top:14px">修改密码</button>
+          <p class="hint">改完后其他设备上的登录状态会全部失效，需要重新登录。</p>
+        </form>
+      </div></div>
+    </section>
+  </main>
+</div>
+
+<div id="mask" class="hidden"><div id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const LANGS = [["zh","中文"],["en","English"],["es","Español"],["pt","Português"],["ru","Русский"],
+["ar","العربية"],["fr","Français"],["de","Deutsch"],["ja","日本語"],["id","Bahasa Indonesia"],
+["vi","Tiếng Việt"],["th","ไทย"]];
+const KINDS = {text:"文本", heading:"小标题", image:"图片", specs:"参数表", note:"提示框", divider:"分隔线"};
+
+let pages = [], allImages = [], cur = null, blocks = [], dirty = false, picker = null;
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>(
+ {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function mb(b){return (b/1048576).toFixed(b>1048576?1:0)+" MB"}
+function kb(b){return (b/1024).toFixed(0)+" KB"}
+function toast(msg,err){const t=$("#toast");t.textContent=msg;t.className="on"+(err?" err":"");
+ clearTimeout(toast._h);toast._h=setTimeout(()=>t.className="",2600)}
+
+async function api(path,opt={}){
+  const o={method:opt.method||"GET",credentials:"same-origin",headers:{}};
+  if(opt.form){o.body=opt.form}
+  else if(opt.json!==undefined){o.headers["content-type"]="application/json";o.body=JSON.stringify(opt.json)}
+  const r=await fetch(path,o);
+  if(r.status===401){showLogin();throw new Error("登录已过期，请重新登录")}
+  let data={};try{data=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(data.detail||("请求失败（"+r.status+"）"));
+  return data;
+}
+
+/* ---------------- 视图切换 ---------------- */
+function showLogin(){$("#login").classList.remove("hidden");$("#app").classList.add("hidden")}
+function showApp(){$("#login").classList.add("hidden");$("#app").classList.remove("hidden")}
+function go(v){
+  $$("#view-list,#view-images,#view-account").forEach(e=>e.classList.add("hidden"));
+  if(v!=="edit")$("#view-edit").classList.add("hidden");
+  if(v==="list")$("#view-list").classList.remove("hidden");
+  if(v==="images"){$("#view-images").classList.remove("hidden");loadImages()}
+  if(v==="account")$("#view-account").classList.remove("hidden");
+  if(v==="edit")$("#view-edit").classList.remove("hidden");
+  $$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v||(v==="edit"&&b.dataset.v==="list")));
+  window.scrollTo(0,0);
+}
+
+/* ---------------- 列表 ---------------- */
+async function loadPages(q=""){
+  pages=(await api("/admin/api/pages?q="+encodeURIComponent(q))).pages;
+  renderList();
+}
+function renderList(){
+  const g=$("#pgrid");
+  $("#listInfo").textContent=`共 ${pages.length} 页 · `+
+    `${pages.filter(p=>p.status==="published").length} 页已发布（已发布的页面客人才能看到）`;
+  if(!pages.length){
+    g.className="";g.innerHTML='<div class="empty card">还没有展示页。点上方「新建展示页」开始。</div>';
+    return;
+  }
+  g.className="pgrid";
+  g.innerHTML=pages.map(p=>{
+    const cov=p.cover_token?`background-image:url('/img/${esc(p.cover_token)}/prev')`:"";
+    return `<div class="pcard">
+      <div class="cov" style="${cov}"></div>
+      <div class="bd">
+        <h3>${esc(p.title)}</h3>
+        <div class="meta">/p/${esc(p.slug)} · ${langName(p.lang)} · ${p.block_count} 个内容块</div>
+        <div style="margin-top:7px"><span class="badge ${p.status==="published"?"pub":"draft"}">${
+          p.status==="published"?"已发布":"草稿"}</span></div>
+      </div>
+      <div class="acts">
+        <button class="btn sm pri" data-e="${p.id}">编辑</button>
+        <button class="btn sm" data-q="${esc(p.slug)}" data-p="${p.status==="published"?1:0}">二维码</button>
+        <button class="btn sm" data-o="/p/${esc(p.slug)}">前台</button>
+      </div></div>`}).join("");
+  g.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>openEditor(+b.dataset.e));
+  g.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>qrModal(b.dataset.q,b.dataset.p==="1",null));
+  g.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>window.open(b.dataset.o,"_blank"));
+}
+const langName = l => (LANGS.find(x => x[0] === l) || [l, l])[1];
+
+/* ---------------- 编辑器 ---------------- */
+async function openEditor(id){
+  const d=await api("/admin/api/pages/"+id);
+  cur=d.page; blocks=d.blocks.map(normalizeBlock); dirty=false;
+  fillMeta(cur); renderBlocks(); go("edit"); refreshPreview();
+  $("#saveState").textContent="";
+}
+function normalizeBlock(b){
+  let pairs=[];
+  if(b.kind==="specs"){
+    try{pairs=JSON.parse(b.data_json||"[]")}catch(e){pairs=[]}
+    if(!Array.isArray(pairs))pairs=[];
+    if(!pairs.length){
+      pairs=(b.text||"").split("\n").filter(Boolean).map(line=>{
+        for(const s of ["：",":","=","|","\t"]){if(line.includes(s)){const i=line.indexOf(s);
+          return {k:line.slice(0,i).trim(),v:line.slice(i+1).trim()}}}
+        return {k:line.trim(),v:""};
+      });
+    }
+  }
+  return {id:b.id,kind:b.kind,text:b.text||"",caption:b.caption||"",image_id:b.image_id||null,
+          image_token:b.image_token||"",pairs};
+}
+function fillMeta(p){
+  $("#f_title").value=p.title||"";
+  $("#f_slug").value=p.slug||"";
+  $("#f_subtitle").value=p.subtitle||"";
+  $("#f_header").value=p.header_text||"";
+  $("#f_group").value=p.group_key||"";
+  $("#f_sort").value=p.sort_order||0;
+  $("#f_footer").value=p.footer_text||"";
+  $("#f_contact").value=p.contact_text||"";
+  const sel=$("#f_lang");
+  sel.innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join("");
+  sel.value=p.lang||"en";
+  $("#editBadge").className="badge "+(p.status==="published"?"pub":"draft");
+  $("#editBadge").textContent=p.status==="published"?"已发布":"草稿";
+  $("#pubBtn").textContent=p.status==="published"?"撤下（变草稿）":"发布";
+  renderCover();
+}
+function renderCover(){
+  const box=$("#coverBox"), p=cur;
+  const img=p.cover_token?`<img class="thumb" src="/img/${esc(p.cover_token)}/prev">`:"";
+  box.innerHTML=img+`<div class="row">
+    <button class="btn sm" id="coverPick">${p.cover_token?"更换封面图":"选择封面图"}</button>
+    ${p.cover_token?'<button class="btn sm dan" id="coverClear">移除</button>':""}
+  </div><p class="hint">封面图横向显示在手机页面顶部，建议宽 1280 以上。</p>`;
+  $("#coverPick").onclick=()=>openPicker(t=>{p.cover_image=t.id;p.cover_token=t.token;renderCover();dirty=true});
+  const c=$("#coverClear"); if(c)c.onclick=()=>{p.cover_image=null;p.cover_token="";renderCover();dirty=true};
+}
+
+function renderBlocks(){
+  const host=$("#blocks");
+  $("#blkCount").textContent=blocks.length?`${blocks.length} 个内容块`:"";
+  if(!blocks.length){host.innerHTML='<p class="hint">还没有内容，用上面的按钮加一段文本或一张图片。</p>';return}
+  host.innerHTML=blocks.map((b,i)=>{
+    let inner="";
+    if(b.kind==="text"||b.kind==="note"){
+      inner=`<textarea data-i="${i}" data-f="text" placeholder="${b.kind==="note"?"给客人的提醒，如“内阻为典型值”":"正文内容"}">${esc(b.text)}</textarea>`;
+    }else if(b.kind==="heading"){
+      inner=`<input data-i="${i}" data-f="text" maxlength="120" placeholder="如 Product Parameters" value="${esc(b.text)}">`;
+    }else if(b.kind==="image"){
+      const src=b.image_token?`/img/${esc(b.image_token)}/prev`:"";
+      inner=`${b.image_token?`<img class="thumb" src="${src}">`:
+        '<p class="hint" style="margin-top:0">还没选图片</p>'}
+        <div class="row" style="align-items:flex-end">
+          <div><label>图注（可留空）</label>
+            <input data-i="${i}" data-f="caption" maxlength="400" value="${esc(b.caption)}"></div>
+        </div>
+        <button class="btn sm" data-pick="${i}">${b.image_token?"换一张":"选择图片"}</button>`;
+    }else if(b.kind==="specs"){
+      inner=(b.pairs||[]).map((pr,j)=>`<div class="kv">
+          <input data-k="${i}" data-j="${j}" data-f="k" placeholder="项目" value="${esc(pr.k)}">
+          <input data-k="${i}" data-j="${j}" data-f="v" placeholder="数值" value="${esc(pr.v)}">
+          <button class="btn sm dan x" data-kx="${i}" data-kj="${j}">删</button></div>`).join("")
+        +`<button class="btn sm" data-kadd="${i}">+ 加一行</button>`;
+    }else if(b.kind==="divider"){
+      inner='<p class="hint" style="margin:0">页面上显示一条细分隔线。</p>';
+    }
+    return `<div class="blk">
+      <div class="bh"><span class="t">${KINDS[b.kind]||b.kind}</span>
+        <span class="ctl">
+          <button class="btn sm" data-up="${i}" ${i===0?"disabled":""}>↑</button>
+          <button class="btn sm" data-dn="${i}" ${i===blocks.length-1?"disabled":""}>↓</button>
+          <button class="btn sm dan" data-del="${i}">删除</button>
+        </span></div>
+      <div class="bb">${inner}</div></div>`;
+  }).join("");
+
+  host.querySelectorAll("[data-f]").forEach(el=>{
+    el.oninput=()=>{
+      const i=+el.dataset.i, f=el.dataset.f;
+      if(f==="k"||f==="v"){blocks[+el.dataset.k].pairs[+el.dataset.j][f]=el.value}
+      else blocks[i][f]=el.value;
+      markDirty();
+    };
+  });
+  host.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>move(+b.dataset.up,-1));
+  host.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>move(+b.dataset.dn,1));
+  host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{blocks.splice(+b.dataset.del,1);renderBlocks();markDirty()});
+  host.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.pick;
+    openPicker(t=>{blocks[i].image_id=t.id;blocks[i].image_token=t.token;renderBlocks();markDirty()});
+  });
+  host.querySelectorAll("[data-kadd]").forEach(b=>b.onclick=()=>{
+    blocks[+b.dataset.kadd].pairs.push({k:"",v:""});renderBlocks();markDirty()});
+  host.querySelectorAll("[data-kx]").forEach(b=>b.onclick=()=>{
+    blocks[+b.dataset.kx].pairs.splice(+b.dataset.kj,1);renderBlocks();markDirty()});
+}
+function move(i,d){const j=i+d;if(j<0||j>=blocks.length)return;
+  [blocks[i],blocks[j]]=[blocks[j],blocks[i]];renderBlocks();markDirty()}
+function markDirty(){dirty=true;$("#saveState").textContent="有未保存的修改"}
+
+$$(".addbar [data-add]").forEach(b=>b.onclick=()=>{
+  const kind=b.dataset.add;
+  const nb={kind,text:"",caption:"",image_id:null,image_token:"",pairs:kind==="specs"?[{k:"",v:""}]:[]};
+  blocks.push(nb);renderBlocks();markDirty();
+  const host=$("#blocks");host.lastElementChild&&host.lastElementChild.scrollIntoView({block:"nearest"});
+});
+
+function collectMeta(){
+  return {
+    title:$("#f_title").value.trim(),
+    lang:$("#f_lang").value,
+    subtitle:$("#f_subtitle").value.trim(),
+    header_text:$("#f_header").value.trim(),
+    group_key:$("#f_group").value.trim(),
+    sort_order:+$("#f_sort").value||0,
+    footer_text:$("#f_footer").value,
+    contact_text:$("#f_contact").value,
+    cover_image:cur.cover_image,
+  };
+}
+function blocksPayload(){
+  return blocks.map(b=>{
+    const o={kind:b.kind,text:b.text,caption:b.caption,image_id:b.image_id};
+    if(b.kind==="specs")o.pairs=(b.pairs||[]).filter(p=>String(p.k||"").trim());
+    return o;
+  });
+}
+async function save(){
+  if(!cur)return;
+  $("#saveBtn").disabled=true;
+  try{
+    const meta=collectMeta();
+    if(!meta.title)throw new Error("标题不能为空");
+    const slug=$("#f_slug").value.trim();
+    let page;
+    if(slug&&slug!==cur.slug){page=await api("/admin/api/pages/"+cur.id,{method:"PUT",json:{...meta,slug}})}
+    else{page=await api("/admin/api/pages/"+cur.id,{method:"PUT",json:meta})}
+    await api("/admin/api/pages/"+cur.id+"/blocks",{method:"PUT",json:{blocks:blocksPayload()}});
+    cur=page;dirty=false;
+    $("#editBadge").className="badge "+(page.status==="published"?"pub":"draft");
+    $("#editBadge").textContent=page.status==="published"?"已发布":"草稿";
+    $("#saveState").textContent="已保存 "+new Date().toLocaleTimeString();
+    refreshPreview();
+    toast("已保存");
+  }catch(e){toast(e.message,true);$("#saveState").textContent="保存失败"}
+  $("#saveBtn").disabled=false;
+}
+function refreshPreview(){
+  if(!cur)return;
+  const url="/preview/"+encodeURIComponent(cur.slug)+"?t="+Date.now();
+  $("#pv").src=url;$("#openPv").href=url;
+}
+$("#saveBtn").onclick=save;
+$("#pubBtn").onclick=async()=>{
+  if(dirty){toast("请先保存再发布",true);return}
+  const to=cur.status==="published"?"draft":"published";
+  try{
+    cur=await api("/admin/api/pages/"+cur.id+"/status",{method:"POST",json:{published:to==="published"}});
+    $("#editBadge").className="badge "+(to==="published"?"pub":"draft");
+    $("#editBadge").textContent=to==="published"?"已发布":"草稿";
+    $("#pubBtn").textContent=to==="published"?"撤下（变草稿）":"发布";
+    refreshPreview();
+    toast(to==="published"?"已发布，客人的二维码现在能打开这页了":"已撤下为草稿");
+  }catch(e){toast(e.message,true)}
+};
+$("#delBtn").onclick=async()=>{
+  if(!cur)return;
+  if(!confirm(`确定删除「${cur.title}」？这个页面的二维码会立刻失效。`))return;
+  try{await api("/admin/api/pages/"+cur.id,{method:"DELETE"});
+    toast("已删除");go("list");loadPages($("#search").value)}catch(e){toast(e.message,true)}
+};
+$("#qrBtn").onclick=()=>{if(cur)qrModal(cur.slug,cur.status==="published",cur.title)};
+$("#dupBtn").onclick=async()=>{
+  if(!cur)return;
+  openModal(`<div class="mh">复制为新语言<span class="btn sm" data-close>关闭</span></div>
+    <div class="mb">
+      <p class="hint" style="margin-top:0">会连正文和图片一起复制一份，新页面是草稿。
+      复制后请把标题、正文翻译成目标语言。</p>
+      <label>目标语言</label><select id="d_lang">${
+        LANGS.map(l=>`<option value="${l[0]}" ${l[0]!==cur.lang?"selected":""}>${l[1]}</option>`).join("")}</select>
+      <label>新标题</label><input id="d_title" value="${esc(cur.title)}">
+      <label>分组标识（保持同一组，手机上才能互切语言）</label>
+      <input id="d_group" value="${esc(cur.group_key)}">
+      <button class="btn pri" style="margin-top:14px" id="d_go">开始复制</button>
+    </div>`);
+  $("#d_go").onclick=async()=>{
+    try{
+      const p=await api("/admin/api/pages/"+cur.id+"/duplicate",{method:"POST",
+        json:{lang:$("#d_lang").value,title:$("#d_title").value,group_key:$("#d_group").value}});
+      closeModal();toast("已复制，记得翻译后发布");await loadPages();openEditor(p.id);
+    }catch(e){toast(e.message,true)}
+  };
+};
+
+/* ---------------- 二维码 ---------------- */
+function qrModal(slug,published,title){
+  const url=location.origin+"/p/"+slug;
+  openModal(`<div class="mh">二维码<span class="btn sm" data-close>关闭</span></div>
+    <div class="mb qbox">
+      ${title?`<p style="margin:0 0 10px;font-weight:600">${esc(title)}</p>`:""}
+      ${published?`<img src="/qr/${esc(slug)}.png?scale=12" alt="二维码">
+        <div class="urlline"><input value="${esc(url)}" readonly id="qurl">
+          <button class="btn sm" id="qcopy">复制链接</button></div>
+        <div class="row" style="justify-content:center">
+          <a class="btn sm" href="/qr/${esc(slug)}.png?scale=20" download>下载 660px</a>
+          <a class="btn sm" href="/qr/${esc(slug)}.png?scale=40" download>下载 1300px</a>
+          <a class="btn sm" href="/qr/${esc(slug)}.svg" download>下载 SVG</a>
+          <a class="btn sm" href="/qr/${esc(slug)}/print" target="_blank">打印卡片</a>
+        </div>
+        <p class="hint">大图用于印刷，小图用于网页。印刷建议用 1300px 或 SVG，尺寸不小于 20mm 见方。</p>`
+      :`<p class="hint">这一页还是草稿，客人扫不出来。请先在编辑页点「发布」，再来取二维码。</p>`}
+    </div>`);
+  const c=$("#qcopy");
+  if(c)c.onclick=async()=>{try{await navigator.clipboard.writeText(url);toast("链接已复制")}
+    catch(e){$("#qurl").select();toast("已选中，按 Ctrl+C 复制")}};
+}
+
+/* ---------------- 图片库 / 选择器 ---------------- */
+async function loadImages(){
+  const d=await api("/admin/api/images");
+  allImages=d.images;
+  $("#storageInfo").textContent=`已用存储 ${mb(d.storage_bytes)}`;
+  const g=$("#igrid");
+  if(!allImages.length){g.className="";
+    g.innerHTML='<div class="empty card">图片库里还没有图片。</div>';return}
+  g.className="igrid";
+  g.innerHTML=allImages.map(im=>`<div class="icell">
+    <img src="/img/${esc(im.token)}/prev" alt="" loading="lazy">
+    <div class="n" title="${esc(im.orig_name)}">${esc(im.orig_name)}</div>
+    <div class="u">${im.width}×${im.height} · 用于 ${im.uses+im.cover_uses} 处</div>
+    <div class="a">${im.uses+im.cover_uses?
+      `<a class="btn sm" href="/img/${esc(im.token)}/orig" target="_blank">看原图</a>`:
+      `<button class="btn sm dan" data-di="${im.id}">删除</button>`}</div>
+  </div>`).join("");
+  g.querySelectorAll("[data-di]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("删除这张图片？"))return;
+    try{await api("/admin/api/images/"+b.dataset.di,{method:"DELETE"});
+      toast("已删除");await loadImages()}catch(e){toast(e.message,true)}
+  });
+}
+function openPicker(onPick,title){
+  picker=onPick;
+  openModal(`<div class="mh">${title||"选择图片"}<span class="btn sm" data-close>关闭</span></div>
+    <div class="mb">
+      <div class="row" style="align-items:center">
+        <div><button class="btn pri sm" id="upBtn">上传图片</button></div>
+        <div><span class="hint">支持 JPG / PNG / WebP / GIF，单张 15 MB 以内</span></div>
+      </div>
+      <input type="file" id="upFile" accept="image/*" class="hidden">
+      <div id="pgrid2" class="igrid" style="margin-top:14px"></div>
+    </div>`);
+  $("#upBtn").onclick=()=>$("#upFile").click();
+  $("#upFile").onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;
+    const fd=new FormData();fd.append("file",f);
+    try{
+      toast("上传中…");
+      const row=await api("/admin/api/images",{method:"POST",form:fd});
+      allImages.unshift(row);
+      renderPickerGrid();
+      toast("上传完成");
+    }catch(err){toast(err.message,true)}
+    e.target.value="";
+  };
+  if(!allImages.length)loadImages().then(renderPickerGrid);
+  renderPickerGrid();
+}
+function renderPickerGrid(){
+  const host=$("#pgrid2");if(!host)return;
+  host.innerHTML=allImages.map(im=>`<div class="icell" data-pi="${im.id}" style="cursor:pointer">
+    <img src="/img/${esc(im.token)}/prev" alt="" loading="lazy">
+    <div class="n">${esc(im.orig_name)}</div>
+    <div class="u">${im.width}×${im.height}</div>
+  </div>`).join("")||'<p class="hint">还没有图片，先上传一张。</p>';
+  host.querySelectorAll("[data-pi]").forEach(el=>el.onclick=()=>{
+    const im=allImages.find(x=>x.id===+el.dataset.pi);
+    const cb=picker;  // closeModal 会清空 picker，先取住再关
+    closeModal();if(cb)cb(im);
+  });
+}
+$("#pickUpload").onclick=()=>openPicker(null,"上传图片");
+
+/* ---------------- 弹窗 / 新建 ---------------- */
+function openModal(html){$("#modal").innerHTML=html;$("#mask").classList.remove("hidden");
+  $$("#modal [data-close]").forEach(b=>b.onclick=closeModal)}
+function closeModal(){$("#mask").classList.add("hidden");picker=null}
+$("#mask").onclick=e=>{if(e.target.id==="mask")closeModal()};
+
+$("#newBtn").onclick=()=>{
+  openModal(`<div class="mh">新建展示页<span class="btn sm" data-close>关闭</span></div>
+    <div class="mb">
+      <label>标题</label><input id="n_title" placeholder="如 R6P AA 1.5V Carbon Battery">
+      <label>语言</label><select id="n_lang">${
+        LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join("")}</select>
+      <label>分组标识（可选，同组页面之间能上下条切换和多语言切换）</label>
+      <input id="n_group" placeholder="如 r6p">
+      <p class="hint">网址标识会按标题自动生成，之后可在编辑页改。</p>
+      <button class="btn pri" style="margin-top:14px" id="n_go">创建</button>
+    </div>`);
+  $("#n_lang").value="en";
+  $("#n_go").onclick=async()=>{
+    try{
+      const p=await api("/admin/api/pages",{method:"POST",json:{
+        title:$("#n_title").value.trim()||"未命名页面",lang:$("#n_lang").value,
+        group_key:$("#n_group").value.trim()}});
+      closeModal();await loadPages();openEditor(p.id);
+    }catch(e){toast(e.message,true)}
+  };
+};
+
+/* ---------------- 登录 / 账号 ---------------- */
+$("#loginForm").onsubmit=async e=>{
+  e.preventDefault();$("#loginErr").textContent="";$("#loginBtn").disabled=true;
+  const fd=new FormData();fd.append("username",$("#lu").value);fd.append("password",$("#lp").value);
+  try{
+    const d=await api("/admin/api/login",{method:"POST",form:fd});
+    showApp();$("#who").textContent=d.username;await loadPages();go("list");
+  }catch(err){$("#loginErr").textContent=err.message}
+  $("#loginBtn").disabled=false;
+};
+$("#logoutBtn").onclick=async()=>{
+  try{await api("/admin/api/logout",{method:"POST"})}catch(e){}
+  showLogin();
+};
+$("#pwForm").onsubmit=async e=>{
+  e.preventDefault();
+  try{
+    const d=await api("/admin/api/password",{method:"POST",
+      json:{old:$("#pw_old").value,new:$("#pw_new").value}});
+    toast(d.note||"密码已修改");$("#pwForm").reset();
+  }catch(err){toast(err.message,true)}
+};
+$$("nav button").forEach(b=>b.onclick=()=>go(b.dataset.v));
+$("#search").oninput=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>loadPages($("#search").value),300)}})();
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==="s"&&!$("#view-edit").classList.contains("hidden")){
+    e.preventDefault();save();}
+});
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue=""}});
+
+/* ---------------- 启动 ---------------- */
+(async function boot(){
+  try{
+    const s=await fetch("/admin/api/session",{credentials:"same-origin"});
+    if(!s.ok){showLogin();return}
+    const d=await s.json();
+    showApp();$("#who").textContent=d.username;
+    await loadPages();go("list");
+  }catch(e){showLogin()}
+})();
+</script>
+</body>
+</html>

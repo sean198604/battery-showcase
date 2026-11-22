@@ -1,0 +1,12 @@
+# 运行数据，永远不要提交
+data/
+storage/
+.env
+
+__pycache__/
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+*.bak.*
+.DS_Store
