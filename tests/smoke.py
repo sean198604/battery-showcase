@@ -137,7 +137,9 @@ pid, slug = page["id"], page["slug"]
 
 blocks = [
     {"kind": "text", "text": "## Product Features\n- Long shelf life **4 years**\n- Leak-proof seal\n"
-                             "\n1. First step\n2. Second step\n\n<img src=x onerror=alert(1)>"},
+                             "\n1. First step\n2. Second step\n\n<img src=x onerror=alert(1)>\n\n"
+                             "[EU instruction manual](https://www.guantecell.com/a.pdf)\n"
+                             "[坏链接](javascript:alert(1))"},
     {"kind": "specs", "pairs": [{"k": "IEC name", "v": "R6P"}, {"k": "Size", "v": "AA / LR6"},
                                {"k": "Nominal voltage", "v": "1.5V"}]},
     {"kind": "note", "text": "Values are typical, not guaranteed."},
@@ -183,6 +185,9 @@ check("发布页面", st == 200 and out.get("status") == "published", f"实际 {
 st, body = call(f"/p/{slug}")
 check("发布后前台 200", st == 200, f"实际 {st}")
 check("正文排版成标题+列表", b"<h3>" in body and b"<li>Long shelf life" in body and b"<strong>" in body)
+check("正文里的 http 链接渲染成可点的 a",
+      b'href="https://www.guantecell.com/a.pdf"' in body and b'rel="noopener noreferrer"' in body)
+check("javascript: 链接不被当成链接渲染", b'href="javascript' not in body)
 check("参数表渲染", b"<table" in body and b"Nominal voltage" in body)
 if image_id:
     check("图片以压缩变体输出", b"/img/" in body and b"/page" in body)

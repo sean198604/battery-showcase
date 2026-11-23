@@ -6,6 +6,8 @@ from . import config
 _RTL_LANGS = {"ar", "he", "fa", "ur"}
 _BOLD = re.compile(r"\*\*(.+?)\*\*")
 _ITALIC = re.compile(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?!\w)")
+# 只放行 http/https，javascript: 之类一律不当链接处理
+_LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
 
 
 def esc(text: str) -> str:
@@ -13,8 +15,9 @@ def esc(text: str) -> str:
 
 
 def inline(text: str) -> str:
-    """只认 **粗体** 和 *斜体*，其余全部转义，避免把用户内容当 HTML 执行。"""
+    """只认 **粗体**、*斜体* 和 [文字](https://链接)，其余全部转义，避免把用户内容当 HTML 执行。"""
     out = esc(text)
+    out = _LINK.sub(r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', out)
     out = _BOLD.sub(r"<strong>\1</strong>", out)
     out = _ITALIC.sub(r"<em>\1</em>", out)
     return out
@@ -125,6 +128,7 @@ h1{margin:.25em 0 .15em;font-size:25px;line-height:1.3}
 .main h4{font-size:17px;margin:1.2em 0 .4em;color:#2f3a45}
 .main ul,.main ol{margin:.6em 0;padding-left:1.4em}
 .main li{margin:.3em 0}
+.main a,.foot a,.note a{color:#2b7fd4;text-decoration:underline;overflow-wrap:break-word}
 figure{margin:14px 0}
 figure img{display:block;width:100%;height:auto;border-radius:8px;background:#eef1f4}
 figcaption{margin-top:6px;font-size:13px;color:#6b7783;text-align:center}
