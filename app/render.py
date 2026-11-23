@@ -139,10 +139,12 @@ table.specs th{width:39%;background:#f6f8fa;color:#42505e;font-weight:600}
  padding:11px 12px;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pager a.next{text-align:right}
 .pager span{color:#8a97a3}
-.langs{padding:14px 18px 0}
-.langs em{display:inline-block;font-style:normal;font-size:12px;color:#8a97a3;margin-bottom:6px}
-.langs a{display:inline-block;margin:0 8px 8px 0;padding:6px 13px;border:1px solid #cfd8e2;
- border-radius:16px;font-size:14px;text-decoration:none;color:#42505e;background:#fff}
+.topbar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;
+ gap:4px 8px;padding:10px 14px 0}
+.langlab{font-size:12px;color:#8a97a3}
+.langs{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.langs a{display:inline-block;padding:5px 11px;border:1px solid #cfd8e2;
+ border-radius:16px;font-size:13px;text-decoration:none;color:#42505e;background:#fff}
 .langs a.on{background:#2b7fd4;border-color:#2b7fd4;color:#fff}
 .draft{margin:0;padding:10px 18px;background:#fff3cd;color:#7a5b00;font-size:13px;text-align:center}
 html[dir=rtl] .main h3{border-left:0;border-right:4px solid #2b7fd4;padding-left:0;padding-right:10px}
@@ -153,8 +155,10 @@ html[dir=rtl] .pager a.next{text-align:left}
 
 def page_html(page: dict, blocks: list[dict], siblings: list[dict],
               prev_page: dict | None, next_page: dict | None,
-              draft_badge: bool = False) -> str:
+              draft_badge: bool = False, accept_language: str = "") -> str:
     lang = page.get("lang") or "en"
+    # 正文语言由页面自己决定，界面小词（上一条/语言）跟着访客浏览器的区域语言走
+    ui = _ui_lang(accept_language, lang)
     direction = "rtl" if lang in _RTL_LANGS else "ltr"
     site = config.LANG_NAMES.get(lang, lang)
 
@@ -162,26 +166,27 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
     for b in blocks:
         body.append(_block_html(b))
     if not blocks:
-        body.append('<div class="note">This page has no content yet.</div>')
+        body.append(f'<div class="note">{esc(_l("empty", ui))}</div>')
 
-    langs_html = ""
+    topbar = ""
     if len(siblings) > 1:
         items = "".join(
             f'<a class="{"on" if s["slug"] == page["slug"] else ""}" href="/p/{esc(s["slug"])}">'
             f'{esc(config.LANG_NAMES.get(s.get("lang") or "en", s.get("lang") or ""))}</a>'
             for s in siblings
         )
-        langs_html = f'<div class="langs"><em>{esc(_l("language", lang))}</em><br>{items}</div>'
+        topbar = (f'<div class="topbar"><span class="langlab">{esc(_l("language", ui))}</span>'
+                  f'<div class="langs">{items}</div></div>')
 
     pager_html = ""
     if prev_page or next_page:
         left = right = ""
         if prev_page:
             left = (f'<a class="prev" href="/p/{esc(prev_page["slug"])}">'
-                    f'<span>{esc(_l("prev", lang))} · </span>{esc(prev_page["title"])}</a>')
+                    f'<span>{esc(_l("prev", ui))} · </span>{esc(prev_page["title"])}</a>')
         if next_page:
             right = (f'<a class="next" href="/p/{esc(next_page["slug"])}">'
-                     f'<span>{esc(_l("next", lang))} · </span>{esc(next_page["title"])}</a>')
+                     f'<span>{esc(_l("next", ui))} · </span>{esc(next_page["title"])}</a>')
         pager_html = f'<div class="pager">{left}{right}</div>'
 
     hero = ""
@@ -197,10 +202,8 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
         head_bits.append(f'<p class="sub">{esc(page["subtitle"])}</p>')
 
     foot = ""
-    if page.get("footer_text") or page.get("contact_text"):
-        rows = "".join(f"<p>{inline(t)}</p>" for t in
-                       (page.get("footer_text") or "", page.get("contact_text") or "") if t.strip())
-        foot = f'<div class="foot">{rows}</div>'
+    if (page.get("footer_text") or "").strip():
+        foot = f'<div class="foot">{rich_text(page["footer_text"])}</div>'
 
     badge = '<div class="draft">草稿预览 · 客人扫正式二维码看不到这页</div>' if draft_badge else ""
     title_tag = esc(page["title"]) or "Showcase"
@@ -222,9 +225,9 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
 <body>
 <div class="wrap">
 {badge}
+{topbar}
 <div class="hero">{hero}<div class="head">{''.join(head_bits)}</div></div>
 <div class="main">{''.join(body)}</div>
-{langs_html}
 {pager_html}
 {foot}
 </div>
@@ -256,11 +259,52 @@ def _block_html(b: dict) -> str:
 
 
 _LABELS = {
-    "prev": {"zh": "上一条", "en": "Previous", "es": "Anterior", "pt": "Anterior", "ru": "Назад"},
-    "next": {"zh": "下一条", "en": "Next", "es": "Siguiente", "pt": "Próximo", "ru": "Далее"},
-    "language": {"zh": "语言", "en": "Language", "es": "Idioma", "pt": "Idioma", "ru": "Язык"},
+    "prev": {"zh": "上一条", "en": "Previous", "es": "Anterior", "pt": "Anterior", "ru": "Назад",
+             "ar": "السابق", "fr": "Précédent", "de": "Zurück", "ja": "前へ",
+             "id": "Sebelumnya", "vi": "Trước", "th": "ก่อนหน้า"},
+    "next": {"zh": "下一条", "en": "Next", "es": "Siguiente", "pt": "Próximo", "ru": "Далее",
+             "ar": "التالي", "fr": "Suivant", "de": "Weiter", "ja": "次へ",
+             "id": "Berikutnya", "vi": "Tiếp", "th": "ถัดไป"},
+    "language": {"zh": "语言", "en": "Language", "es": "Idioma", "pt": "Idioma", "ru": "Язык",
+                 "ar": "اللغة", "fr": "Langue", "de": "Sprache", "ja": "言語",
+                 "id": "Bahasa", "vi": "Ngôn ngữ", "th": "ภาษา"},
+    "empty": {"zh": "这个页面还没有内容。", "en": "This page has no content yet.",
+              "es": "Esta página aún no tiene contenido.", "pt": "Esta página ainda não tem conteúdo.",
+              "ru": "На этой странице пока нет содержимого.", "ar": "لا يوجد محتوى في هذه الصفحة بعد.",
+              "fr": "Cette page n'a pas encore de contenu.", "de": "Diese Seite hat noch keinen Inhalt.",
+              "ja": "このページにはまだ内容がありません。", "id": "Halaman ini belum memiliki konten.",
+              "vi": "Trang này chưa có nội dung.", "th": "หน้านี้ยังไม่มีเนื้อหา"},
 }
 
 
 def _l(key: str, lang: str) -> str:
-    return _LABELS.get(key, {}).get(lang, _LABELS.get(key, {}).get("en", key))
+    table = _LABELS.get(key, {})
+    return table.get(lang) or table.get("en", key)
+
+
+def _ui_lang(accept_language: str, page_lang: str) -> str:
+    """按浏览器 Accept-Language 选界面小词的语言，认不出来就退回页面自己的语言。"""
+    for tag in _accept_tags(accept_language):
+        if tag in _LABELS["prev"]:
+            return tag
+    return page_lang if page_lang in _LABELS["prev"] else "en"
+
+
+def _accept_tags(header: str) -> list[str]:
+    """解析 Accept-Language，按 q 权重从高到低返回主语言子标签（zh-CN → zh）。"""
+    scored: list[tuple[float, int, str]] = []
+    for order, part in enumerate(header.split(",")):
+        tag, _, params = part.strip().partition(";")
+        primary = tag.lower().split("-")[0]
+        quality = 1.0
+        for param in params.split(";"):
+            name, _, value = param.strip().partition("=")
+            if name.lower() == "q":
+                try:
+                    quality = float(value)
+                except ValueError:
+                    quality = 0.0
+        if primary and primary != "*":
+            # 同权重时保留浏览器列出的先后顺序
+            scored.append((-quality, order, primary))
+    return [tag for _, _, tag in sorted(scored)]

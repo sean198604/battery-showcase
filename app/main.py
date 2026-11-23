@@ -202,7 +202,6 @@ def page_meta(body: dict, existing: dict | None = None) -> dict:
         "sort_order": sort,
         "header_text": field("header_text", "", 120).strip(),
         "footer_text": field("footer_text", "", 1000),
-        "contact_text": field("contact_text", "", 1000),
         "cover_image": _as_int(cover),
     }
 
@@ -222,7 +221,7 @@ def show_page(slug: str, request: Request):
     page = get_page("p.slug = ? AND p.status = 'published'", slug)
     if not page:
         raise HTTPException(404, "页面不存在或未发布")
-    return _render_page(page)
+    return _render_page(page, request)
 
 
 @app.get("/preview/{slug}", response_class=HTMLResponse)
@@ -232,12 +231,14 @@ def preview_page(slug: str, request: Request):
     page = get_page("p.slug = ?", slug)
     if not page:
         raise HTTPException(404, "页面不存在")
-    return _render_page(page, draft=page["status"] != "published")
+    return _render_page(page, request, draft=page["status"] != "published")
 
 
-def _render_page(page: dict, draft: bool = False) -> str:
+def _render_page(page: dict, request: Request, draft: bool = False) -> str:
     blocks = get_blocks(page["id"])
-    return render.page_html(page, blocks, siblings(page), *neighbours(page), draft_badge=draft)
+    return render.page_html(page, blocks, siblings(page), *neighbours(page),
+                            draft_badge=draft,
+                            accept_language=request.headers.get("accept-language", ""))
 
 
 @app.get("/qr/{slug}.png")
@@ -410,10 +411,10 @@ def create_page(request: Request, body: dict):
     now = db.now()
     page_id = db.execute(
         "INSERT INTO pages (slug, status, created_at, updated_at, title, subtitle, lang, group_key,"
-        " sort_order, header_text, footer_text, contact_text, cover_image) "
-        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " sort_order, header_text, footer_text, cover_image) "
+        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (slug, now, now, meta["title"], meta["subtitle"], meta["lang"], group,
-         meta["sort_order"], meta["header_text"], meta["footer_text"], meta["contact_text"],
+         meta["sort_order"], meta["header_text"], meta["footer_text"],
          meta["cover_image"]),
     )
     return get_page("p.id = ?", page_id)
@@ -451,10 +452,10 @@ def update_page(request: Request, page_id: int, body: dict):
         slug = page["slug"]
     db.execute(
         "UPDATE pages SET slug=?, title=?, subtitle=?, lang=?, group_key=?, sort_order=?,"
-        " header_text=?, footer_text=?, contact_text=?, cover_image=?, updated_at=? WHERE id=?",
+        " header_text=?, footer_text=?, cover_image=?, updated_at=? WHERE id=?",
         (slug, meta["title"], meta["subtitle"], meta["lang"],
          meta["group_key"] or page["group_key"] or slug, meta["sort_order"],
-         meta["header_text"], meta["footer_text"], meta["contact_text"], meta["cover_image"],
+         meta["header_text"], meta["footer_text"], meta["cover_image"],
          db.now(), page_id),
     )
     return get_page("p.id = ?", page_id)
@@ -501,11 +502,11 @@ def duplicate_page(request: Request, page_id: int, body: dict):
     now = db.now()
     new_id = db.execute(
         "INSERT INTO pages (slug, status, created_at, updated_at, title, subtitle, lang, group_key,"
-        " sort_order, header_text, footer_text, contact_text, cover_image) "
-        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " sort_order, header_text, footer_text, cover_image) "
+        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (slug, now, now, body.get("title") or source["title"], source["subtitle"], lang,
          body.get("group_key") or source["group_key"], source["sort_order"], source["header_text"],
-         source["footer_text"], source["contact_text"], source["cover_image"]),
+         source["footer_text"], source["cover_image"]),
     )
     with db.db() as conn:
         conn.executemany(

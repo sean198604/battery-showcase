@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS pages (
     status        TEXT    NOT NULL DEFAULT 'draft',
     header_text   TEXT    NOT NULL DEFAULT '',
     footer_text   TEXT    NOT NULL DEFAULT '',
-    contact_text  TEXT    NOT NULL DEFAULT '',
     cover_image   INTEGER REFERENCES images(id) ON DELETE SET NULL,
     created_at    TEXT    NOT NULL,
     updated_at    TEXT    NOT NULL
@@ -120,3 +119,7 @@ def init() -> None:
     config.ensure_dirs()
     with db() as conn:
         conn.executescript(SCHEMA)
+        # 旧库里的 contact_text（页面底部联系方式）已经不再展示，直接删列
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(pages)")}
+        if "contact_text" in cols:
+            conn.execute("ALTER TABLE pages DROP COLUMN contact_text")

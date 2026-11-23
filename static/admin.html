@@ -173,8 +173,6 @@ iframe#pv{width:100%;height:min(76vh,760px);border:0;background:#fff;border-radi
             <div id="coverBox"></div>
             <label>页脚说明</label>
             <textarea id="f_footer" style="min-height:70px"></textarea>
-            <label>联系方式</label>
-            <textarea id="f_contact" style="min-height:70px"></textarea>
             <p class="hint">正文里可以写 **加粗**、以 - 开头的列表、以 ## 开头的小标题，空行分段。</p>
           </div>
         </div>
@@ -350,7 +348,6 @@ function fillMeta(p){
   $("#f_group").value=p.group_key||"";
   $("#f_sort").value=p.sort_order||0;
   $("#f_footer").value=p.footer_text||"";
-  $("#f_contact").value=p.contact_text||"";
   const sel=$("#f_lang");
   sel.innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join("");
   sel.value=p.lang||"en";
@@ -448,7 +445,6 @@ function collectMeta(){
     group_key:$("#f_group").value.trim(),
     sort_order:+$("#f_sort").value||0,
     footer_text:$("#f_footer").value,
-    contact_text:$("#f_contact").value,
     cover_image:cur.cover_image,
   };
 }

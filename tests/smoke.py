@@ -21,13 +21,15 @@ _heads = {}
 _failed = []
 
 
-def call(path, data=None, ctype=None, method=None):
+def call(path, data=None, ctype=None, method=None, headers=None):
     req = urllib.request.Request(BASE + path, data=data,
                                  method=method or ("POST" if data is not None else "GET"))
     # 手机浏览器 UA：套 Cloudflare 的实例会按指纹拦掉 Python-urllib 默认头
     req.add_header("User-Agent",
                    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) "
                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1")
+    for key, value in (headers or {}).items():
+        req.add_header(key, value)
     if ctype:
         req.add_header("Content-Type", ctype)
     if _cookie:
@@ -231,6 +233,33 @@ check("复制的内容块文字一致",
 jget(f"/admin/api/pages/{cid}/status", data=json.dumps({"published": True}).encode(), ctype="application/json")
 st, body = call(f"/p/{slug}")
 check("同组页面出多语言切换", st == 200 and b'class="langs"' in body, f"实际 {st}")
+
+# 6c. 界面小词跟着访客浏览器语言，不再只看页面语言
+st, body = call(f"/p/{slug}", headers={"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"})
+check("浏览器是中文时界面小词跟着变中文",
+      st == 200 and b'class="langlab">' in body and "语言".encode() in body, f"实际 {st}")
+st, body = call(f"/p/{slug}", headers={"Accept-Language": "de-DE,de;q=0.9"})
+check("浏览器是德语时界面小词变德语（页面本身仍是英文）",
+      st == 200 and ">Sprache<" in body.decode("utf-8", "replace"), f"实际 {st}")
+st, body = call(f"/p/{slug}", headers={"Accept-Language": "xx-YY"})
+check("认不出的浏览器语言退回页面语言",
+      st == 200 and ">Language<" in body.decode("utf-8", "replace"), f"实际 {st}")
+st, body = call(f"/p/{slug}")
+check("语言切换条在正文上方（右上角）",
+      st == 200 and b'class="topbar"' in body
+      and body.index(b'class="topbar"') < body.index(b'class="hero"'), f"实际 {st}")
+
+# 底部联系方式已删除：后台再传这个字段也不该出现在页面上
+st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
+               data=json.dumps({"title": "SMOKE R6P", "contact_text": "Tel +86 13800000000"}).encode(),
+               ctype="application/json")
+st, body = call(f"/p/{slug}")
+check("联系方式不再渲染到页面底部", st == 200 and b"13800000000" not in body, f"实际 {st}")
+st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
+               data=json.dumps({"title": "SMOKE R6P", "footer_text": "Typical values, not guarantees."}).encode(),
+               ctype="application/json")
+st, body = call(f"/p/{slug}")
+check("页脚说明仍然保留", st == 200 and b"Typical values" in body, f"实际 {st}")
 
 # 6b. 不填分组标识：应自成一组，复制后仍能互相切换，保存也不该把分组清空
 st, auto = jget("/admin/api/pages", data=json.dumps({"title": f"SMOKE Auto {tag}"}).encode(),
