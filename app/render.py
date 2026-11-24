@@ -167,9 +167,10 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
     site = config.LANG_NAMES.get(lang, lang)
 
     body: list[str] = []
-    for b in blocks:
+    visible = [b for b in blocks if not b.get("hidden")]
+    for b in visible:
         body.append(_block_html(b))
-    if not blocks:
+    if not visible:
         body.append(f'<div class="note">{esc(_l("empty", ui))}</div>')
 
     topbar = ""

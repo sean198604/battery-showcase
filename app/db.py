@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS blocks (
     text       TEXT    NOT NULL DEFAULT '',
     image_id   INTEGER REFERENCES images(id) ON DELETE SET NULL,
     caption    TEXT    NOT NULL DEFAULT '',
-    data_json  TEXT    NOT NULL DEFAULT ''
+    data_json  TEXT    NOT NULL DEFAULT '',
+    hidden     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_blocks_page ON blocks(page_id, position);
 
@@ -123,3 +124,7 @@ def init() -> None:
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(pages)")}
         if "contact_text" in cols:
             conn.execute("ALTER TABLE pages DROP COLUMN contact_text")
+        # 内容块支持"暂时不显示"：保留内容，只是不在页面上渲染
+        bcols = {r["name"] for r in conn.execute("PRAGMA table_info(blocks)")}
+        if "hidden" not in bcols:
+            conn.execute("ALTER TABLE blocks ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0")

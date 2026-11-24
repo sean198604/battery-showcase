@@ -168,7 +168,7 @@ def clean_blocks(raw) -> list[dict]:
                 raise HTTPException(400, "图片不存在，请重新上传")
         out.append({"kind": kind, "position": index, "text": text,
                     "caption": caption, "image_id": _as_int(image_id),
-                    "data_json": data_json})
+                    "data_json": data_json, "hidden": 1 if item.get("hidden") else 0})
     return out
 
 
@@ -470,10 +470,10 @@ def update_blocks(request: Request, page_id: int, body: dict):
     with db.db() as conn:
         conn.execute("DELETE FROM blocks WHERE page_id = ?", (page_id,))
         conn.executemany(
-            "INSERT INTO blocks (page_id, kind, position, text, image_id, caption, data_json)"
-            " VALUES (?,?,?,?,?,?,?)",
-            [(page_id, b["kind"], b["position"], b["text"], b["image_id"], b["caption"], b["data_json"])
-             for b in blocks],
+            "INSERT INTO blocks (page_id, kind, position, text, image_id, caption, data_json, hidden)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            [(page_id, b["kind"], b["position"], b["text"], b["image_id"], b["caption"],
+              b["data_json"], b["hidden"]) for b in blocks],
         )
         conn.execute("UPDATE pages SET updated_at = ? WHERE id = ?", (db.now(), page_id))
     return {"ok": True, "count": len(blocks)}
@@ -510,8 +510,9 @@ def duplicate_page(request: Request, page_id: int, body: dict):
     )
     with db.db() as conn:
         conn.executemany(
-            "INSERT INTO blocks (page_id, kind, position, text, image_id, caption, data_json)"
-            " SELECT ?, kind, position, text, image_id, caption, data_json FROM blocks WHERE page_id = ?",
+            "INSERT INTO blocks (page_id, kind, position, text, image_id, caption, data_json, hidden)"
+            " SELECT ?, kind, position, text, image_id, caption, data_json, hidden"
+            " FROM blocks WHERE page_id = ?",
             [(new_id, page_id)],
         )
     return get_page("p.id = ?", new_id)

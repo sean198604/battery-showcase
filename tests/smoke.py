@@ -221,6 +221,23 @@ st, out = jget(f"/admin/api/pages/{pid}/blocks", method="PUT",
                data=json.dumps({"blocks": blocks}).encode(), ctype="application/json")
 check("恢复原来的内容块", st == 200 and out.get("count") == len(blocks), f"实际 {st}")
 
+# 5d. 内容块可以"暂时不显示"，隐藏后不在页面上渲染，后台里仍留着
+off = [{**b, "hidden": 1} if b["kind"] == "text" and "Long shelf life" in b.get("text", "") else b
+       for b in blocks]
+st, out = jget(f"/admin/api/pages/{pid}/blocks", method="PUT",
+               data=json.dumps({"blocks": off}).encode(), ctype="application/json")
+st, body = call(f"/p/{slug}")
+check("隐藏的内容块不在页面上显示", st == 200 and b"Long shelf life" not in body
+      and b"IEC name" in body, f"实际 {st}")
+st, out = jget(f"/admin/api/pages/{pid}")
+check("后台能读回隐藏标记（编辑页可再打开）",
+      st == 200 and any(bb.get("hidden") == 1 and "Long shelf life" in bb["text"]
+                        for bb in out.get("blocks", [])), f"实际 {st}")
+st, out = jget(f"/admin/api/pages/{pid}/blocks", method="PUT",
+               data=json.dumps({"blocks": blocks}).encode(), ctype="application/json")
+st, body = call(f"/p/{slug}")
+check("取消隐藏后内容块回到页面", st == 200 and b"Long shelf life" in body, f"实际 {st}")
+
 # 6. 多语言复制
 st, copy = jget(f"/admin/api/pages/{pid}/duplicate",
                 data=json.dumps({"lang": "es", "title": f"SMOKE Pila R6P {tag}"}).encode(),

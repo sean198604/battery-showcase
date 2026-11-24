@@ -71,6 +71,10 @@ iframe#pv{width:100%;height:min(76vh,760px);border:0;background:#fff;border-radi
 .blk>.bh .t{font-size:13px;font-weight:600;color:#3c4a58;flex:1}
 .blk>.bb{padding:12px}
 .blk .ctl{display:flex;gap:6px}
+.blk.off{border-style:dashed;background:#f7f8fa}
+.blk.off>.bb{opacity:.5}
+.blk.off>.bh .t::after{content:"已隐藏，不在页面上显示";font-weight:400;color:#98a4b0;
+ font-size:12px;margin-left:8px}
 .addbar{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 14px}
 .kv{display:flex;gap:8px;margin-bottom:8px;align-items:center}
 .kv input{flex:1}
@@ -338,7 +342,7 @@ function normalizeBlock(b){
     }
   }
   return {id:b.id,kind:b.kind,text:b.text||"",caption:b.caption||"",image_id:b.image_id||null,
-          image_token:b.image_token||"",pairs};
+          image_token:b.image_token||"",hidden:b.hidden?1:0,pairs};
 }
 function fillMeta(p){
   $("#f_title").value=p.title||"";
@@ -395,9 +399,10 @@ function renderBlocks(){
     }else if(b.kind==="divider"){
       inner='<p class="hint" style="margin:0">页面上显示一条细分隔线。</p>';
     }
-    return `<div class="blk">
+    return `<div class="blk${b.hidden?" off":""}">
       <div class="bh"><span class="t">${KINDS[b.kind]||b.kind}</span>
         <span class="ctl">
+          <button class="btn sm" data-hide="${i}">${b.hidden?"显示":"隐藏"}</button>
           <button class="btn sm" data-up="${i}" ${i===0?"disabled":""}>↑</button>
           <button class="btn sm" data-dn="${i}" ${i===blocks.length-1?"disabled":""}>↓</button>
           <button class="btn sm dan" data-del="${i}">删除</button>
@@ -416,6 +421,8 @@ function renderBlocks(){
   host.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>move(+b.dataset.up,-1));
   host.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>move(+b.dataset.dn,1));
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{blocks.splice(+b.dataset.del,1);renderBlocks();markDirty()});
+  host.querySelectorAll("[data-hide]").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.hide;blocks[i].hidden=blocks[i].hidden?0:1;renderBlocks();markDirty()});
   host.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{
     const i=+b.dataset.pick;
     openPicker(t=>{blocks[i].image_id=t.id;blocks[i].image_token=t.token;renderBlocks();markDirty()});
@@ -450,7 +457,7 @@ function collectMeta(){
 }
 function blocksPayload(){
   return blocks.map(b=>{
-    const o={kind:b.kind,text:b.text,caption:b.caption,image_id:b.image_id};
+    const o={kind:b.kind,text:b.text,caption:b.caption,image_id:b.image_id,hidden:b.hidden?1:0};
     if(b.kind==="specs")o.pairs=(b.pairs||[]).filter(p=>String(p.k||"").trim());
     return o;
   });
