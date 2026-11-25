@@ -27,6 +27,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #cfe3f7;border-color:v
 textarea{min-height:110px;resize:vertical;line-height:1.7}
 label{display:block;font-size:13px;color:var(--mut);margin:14px 0 5px}
 label:first-child{margin-top:0}
+label.chk{display:flex;gap:8px;align-items:flex-start;color:#1c2530;font-size:14px;line-height:1.5}
+label.chk input{margin:3px 0 0;flex:0 0 auto;width:17px;height:17px}
 .row{display:flex;gap:12px;flex-wrap:wrap}
 .row>*{flex:1;min-width:150px}
 .hint{font-size:12px;color:var(--mut);margin:5px 0 0}
@@ -177,6 +179,9 @@ iframe#pv{width:100%;height:min(76vh,760px);border:0;background:#fff;border-radi
             <div id="coverBox"></div>
             <label>页脚说明</label>
             <textarea id="f_footer" style="min-height:70px"></textarea>
+            <label class="chk"><input type="checkbox" id="f_onlyimg">
+              <span>这一页只看图片：正文里的文本、小标题、参数表、提示框都不显示，页面上只剩图片和图注；
+              标题、页眉小字、副标题、封面图和页脚说明照常显示。取消勾选立刻恢复，内容不会丢。</span></label>
             <p class="hint">正文里可以写 **加粗**、以 - 开头的列表、以 ## 开头的小标题、[文字](https://链接)，空行分段。</p>
           </div>
         </div>
@@ -308,7 +313,8 @@ function renderList(){
         <h3>${esc(p.title)}</h3>
         <div class="meta">/p/${esc(p.slug)} · ${langName(p.lang)} · ${p.block_count} 个内容块</div>
         <div style="margin-top:7px"><span class="badge ${p.status==="published"?"pub":"draft"}">${
-          p.status==="published"?"已发布":"草稿"}</span></div>
+          p.status==="published"?"已发布":"草稿"}</span>${
+          p.images_only?' <span class="badge">只看图片</span>':""}</div>
       </div>
       <div class="acts">
         <button class="btn sm pri" data-e="${p.id}">编辑</button>
@@ -352,6 +358,7 @@ function fillMeta(p){
   $("#f_group").value=p.group_key||"";
   $("#f_sort").value=p.sort_order||0;
   $("#f_footer").value=p.footer_text||"";
+  $("#f_onlyimg").checked=!!p.images_only;
   const sel=$("#f_lang");
   sel.innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join("");
   sel.value=p.lang||"en";
@@ -453,6 +460,7 @@ function collectMeta(){
     sort_order:+$("#f_sort").value||0,
     footer_text:$("#f_footer").value,
     cover_image:cur.cover_image,
+    images_only:$("#f_onlyimg").checked?1:0,
   };
 }
 function blocksPayload(){

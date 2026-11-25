@@ -194,6 +194,7 @@ def page_meta(body: dict, existing: dict | None = None) -> dict:
         sort = int(sort)
     except (TypeError, ValueError):
         sort = 0
+    images_only = body.get("images_only", existing.get("images_only", 0) if existing else 0)
     return {
         "title": title,
         "subtitle": field("subtitle", "", 300).strip(),
@@ -203,6 +204,7 @@ def page_meta(body: dict, existing: dict | None = None) -> dict:
         "header_text": field("header_text", "", 120).strip(),
         "footer_text": field("footer_text", "", 1000),
         "cover_image": _as_int(cover),
+        "images_only": 1 if images_only else 0,
     }
 
 
@@ -385,7 +387,8 @@ def change_password(request: Request, body: dict):
 def list_pages(request: Request, q: str = ""):
     require_admin(request)
     sql = ("SELECT p.id, p.slug, p.title, p.subtitle, p.lang, p.group_key, p.sort_order, p.status, "
-           "p.updated_at, (SELECT COUNT(*) FROM blocks b WHERE b.page_id = p.id) AS block_count, "
+           "p.images_only, p.updated_at, "
+           "(SELECT COUNT(*) FROM blocks b WHERE b.page_id = p.id) AS block_count, "
            "i.token AS cover_token "
            "FROM pages p LEFT JOIN images i ON i.id = p.cover_image ")
     args: tuple = ()
@@ -411,11 +414,11 @@ def create_page(request: Request, body: dict):
     now = db.now()
     page_id = db.execute(
         "INSERT INTO pages (slug, status, created_at, updated_at, title, subtitle, lang, group_key,"
-        " sort_order, header_text, footer_text, cover_image) "
-        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " sort_order, header_text, footer_text, cover_image, images_only) "
+        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (slug, now, now, meta["title"], meta["subtitle"], meta["lang"], group,
          meta["sort_order"], meta["header_text"], meta["footer_text"],
-         meta["cover_image"]),
+         meta["cover_image"], meta["images_only"]),
     )
     return get_page("p.id = ?", page_id)
 
@@ -452,11 +455,11 @@ def update_page(request: Request, page_id: int, body: dict):
         slug = page["slug"]
     db.execute(
         "UPDATE pages SET slug=?, title=?, subtitle=?, lang=?, group_key=?, sort_order=?,"
-        " header_text=?, footer_text=?, cover_image=?, updated_at=? WHERE id=?",
+        " header_text=?, footer_text=?, cover_image=?, images_only=?, updated_at=? WHERE id=?",
         (slug, meta["title"], meta["subtitle"], meta["lang"],
          meta["group_key"] or page["group_key"] or slug, meta["sort_order"],
          meta["header_text"], meta["footer_text"], meta["cover_image"],
-         db.now(), page_id),
+         meta["images_only"], db.now(), page_id),
     )
     return get_page("p.id = ?", page_id)
 
@@ -502,11 +505,12 @@ def duplicate_page(request: Request, page_id: int, body: dict):
     now = db.now()
     new_id = db.execute(
         "INSERT INTO pages (slug, status, created_at, updated_at, title, subtitle, lang, group_key,"
-        " sort_order, header_text, footer_text, cover_image) "
-        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " sort_order, header_text, footer_text, cover_image, images_only) "
+        "VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (slug, now, now, body.get("title") or source["title"], source["subtitle"], lang,
          body.get("group_key") or source["group_key"], source["sort_order"], source["header_text"],
-         source["footer_text"], source["cover_image"]),
+         source["footer_text"], source["cover_image"],
+         1 if body.get("images_only", source["images_only"]) else 0),
     )
     with db.db() as conn:
         conn.executemany(

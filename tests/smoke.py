@@ -283,6 +283,31 @@ st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
 st, body = call(f"/p/{slug}")
 check("页脚说明仍然保留", st == 200 and b"Typical values" in body, f"实际 {st}")
 
+# 6a. 整页只看图片：文字类内容块不渲染，图片和标题/页脚照常留着
+st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
+               data=json.dumps({"title": "SMOKE R6P", "images_only": 1}).encode(),
+               ctype="application/json")
+check("页面上可以打开只看图片", st == 200 and out.get("images_only") == 1, f"实际 {st} {str(out)[:120]}")
+st, body = call(f"/p/{slug}")
+check("只看图片时文本块和小标题不显示", st == 200 and b"Long shelf life" not in body
+      and b"IEC name" not in body and b"Values are typical, not guaranteed" not in body, f"实际 {st}")
+check("只看图片时标题、页脚仍然显示", b"<h1>SMOKE R6P</h1>" in body
+      and b"Carbon Zn/MnO2 Battery" in body and b"Typical values" in body, f"实际 {st}")
+check("只看图片时图片还在（含图注）", b"/img/" in body and b"<figure" in body
+      and b'onlyimg' in body, f"实际 {st}")
+st, out = jget(f"/admin/api/pages/{pid}")
+check("后台能读回只看图片标记", st == 200 and out["page"].get("images_only") == 1, f"实际 {st}")
+st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
+               data=json.dumps({"title": "SMOKE R6P"}).encode(), ctype="application/json")
+check("保存其它字段时不会关掉只看图片", st == 200 and out.get("images_only") == 1,
+      f"实际 {st} {out.get('images_only')!r}")
+st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
+               data=json.dumps({"title": "SMOKE R6P", "images_only": 0}).encode(),
+               ctype="application/json")
+st, body = call(f"/p/{slug}")
+check("取消只看图片后文字内容回到页面", st == 200 and b"Long shelf life" in body
+      and b"IEC name" in body, f"实际 {st}")
+
 # 6b. 不填分组标识：应自成一组，复制后仍能互相切换，保存也不该把分组清空
 st, auto = jget("/admin/api/pages", data=json.dumps({"title": f"SMOKE Auto {tag}"}).encode(),
                 ctype="application/json")

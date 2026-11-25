@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS pages (
     header_text   TEXT    NOT NULL DEFAULT '',
     footer_text   TEXT    NOT NULL DEFAULT '',
     cover_image   INTEGER REFERENCES images(id) ON DELETE SET NULL,
+    images_only   INTEGER NOT NULL DEFAULT 0,
     created_at    TEXT    NOT NULL,
     updated_at    TEXT    NOT NULL
 );
@@ -128,3 +129,6 @@ def init() -> None:
         bcols = {r["name"] for r in conn.execute("PRAGMA table_info(blocks)")}
         if "hidden" not in bcols:
             conn.execute("ALTER TABLE blocks ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0")
+        # 整页只看图片：正文里的文字类内容块不渲染，只留图片
+        if "images_only" not in cols:
+            conn.execute("ALTER TABLE pages ADD COLUMN images_only INTEGER NOT NULL DEFAULT 0")

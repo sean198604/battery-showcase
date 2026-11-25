@@ -151,6 +151,11 @@ table.specs th{width:39%;background:#f6f8fa;color:#42505e;font-weight:600}
  border-radius:16px;font-size:13px;text-decoration:none;color:#42505e;background:#fff}
 .langs a.on{background:#2b7fd4;border-color:#2b7fd4;color:#fff}
 .draft{margin:0;padding:10px 18px;background:#fff3cd;color:#7a5b00;font-size:13px;text-align:center}
+.onlyimg .main{padding:0}
+.onlyimg figure{margin:0 0 12px}
+.onlyimg figure img{border-radius:0}
+.onlyimg figcaption{padding:0 14px}
+.onlyimg .note{margin:14px}
 html[dir=rtl] .main h3{border-left:0;border-right:4px solid #2b7fd4;padding-left:0;padding-right:10px}
 html[dir=rtl] table.specs th{text-align:right}
 html[dir=rtl] .pager a.next{text-align:left}
@@ -167,7 +172,12 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
     site = config.LANG_NAMES.get(lang, lang)
 
     body: list[str] = []
+    # 整页只看图片：文本、小标题、参数表、提示框内容块都不渲染，只留图片和图注；
+    # 标题、页眉小字、副标题、封面图、页脚说明照常显示
+    only_images = bool(page.get("images_only"))
     visible = [b for b in blocks if not b.get("hidden")]
+    if only_images:
+        visible = [b for b in visible if b.get("kind") == "image"]
     for b in visible:
         body.append(_block_html(b))
     if not visible:
@@ -228,7 +238,7 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
 <style>{CSS}</style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap{' onlyimg' if only_images else ''}">
 {badge}
 {topbar}
 <div class="hero">{hero}<div class="head">{''.join(head_bits)}</div></div>
