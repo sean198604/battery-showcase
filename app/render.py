@@ -151,6 +151,8 @@ table.specs th{width:39%;background:#f6f8fa;color:#42505e;font-weight:600}
  border-radius:16px;font-size:13px;text-decoration:none;color:#42505e;background:#fff}
 .langs a.on{background:#2b7fd4;border-color:#2b7fd4;color:#fff}
 .draft{margin:0;padding:10px 18px;background:#fff3cd;color:#7a5b00;font-size:13px;text-align:center}
+.onlyimg .hero{padding:0}
+.onlyimg .hero .cover{height:auto;object-fit:contain}
 .onlyimg .main{padding:0}
 .onlyimg figure{margin:0 0 12px}
 .onlyimg figure img{border-radius:0}
@@ -172,8 +174,8 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
     site = config.LANG_NAMES.get(lang, lang)
 
     body: list[str] = []
-    # 整页只看图片：文本、小标题、参数表、提示框内容块都不渲染，只留图片和图注；
-    # 标题、页眉小字、副标题、封面图、页脚说明照常显示
+    # 整页只看图片：标题、页眉小字、副标题、正文文字类内容块、页脚说明全都不渲染，
+    # 页面上只剩图片（封面图和图注属于图片，保留）
     only_images = bool(page.get("images_only"))
     visible = [b for b in blocks if not b.get("hidden")]
     if only_images:
@@ -210,18 +212,21 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
                 f'alt="{esc(page["title"])}">')
 
     head_bits = []
-    if page.get("header_text"):
-        head_bits.append(f'<p class="cat">{esc(page["header_text"])}</p>')
-    head_bits.append(f"<h1>{esc(page['title'])}</h1>")
-    if page.get("subtitle"):
-        head_bits.append(f'<p class="sub">{esc(page["subtitle"])}</p>')
+    if not only_images:
+        if page.get("header_text"):
+            head_bits.append(f'<p class="cat">{esc(page["header_text"])}</p>')
+        head_bits.append(f"<h1>{esc(page['title'])}</h1>")
+        if page.get("subtitle"):
+            head_bits.append(f'<p class="sub">{esc(page["subtitle"])}</p>')
 
     foot = ""
-    if (page.get("footer_text") or "").strip():
+    if (page.get("footer_text") or "").strip() and not only_images:
         foot = f'<div class="foot">{rich_text(page["footer_text"])}</div>'
 
     badge = '<div class="draft">草稿预览 · 客人扫正式二维码看不到这页</div>' if draft_badge else ""
     title_tag = esc(page["title"]) or "Showcase"
+    head_html = f'<div class="head">{"".join(head_bits)}</div>' if head_bits else ""
+    hero_html = f'<div class="hero">{hero}{head_html}</div>' if (hero or head_html) else ""
 
     return f"""<!doctype html>
 <html lang="{esc(lang)}" dir="{direction}">
@@ -241,7 +246,7 @@ def page_html(page: dict, blocks: list[dict], siblings: list[dict],
 <div class="wrap{' onlyimg' if only_images else ''}">
 {badge}
 {topbar}
-<div class="hero">{hero}<div class="head">{''.join(head_bits)}</div></div>
+{hero_html}
 <div class="main">{''.join(body)}</div>
 {pager_html}
 {foot}

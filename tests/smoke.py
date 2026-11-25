@@ -283,7 +283,7 @@ st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
 st, body = call(f"/p/{slug}")
 check("页脚说明仍然保留", st == 200 and b"Typical values" in body, f"实际 {st}")
 
-# 6a. 整页只看图片：文字类内容块不渲染，图片和标题/页脚照常留着
+# 6a. 整页只看图片：标题、副标题、页眉小字、文字类内容块、页脚全部不渲染，只剩图片
 st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
                data=json.dumps({"title": "SMOKE R6P", "images_only": 1}).encode(),
                ctype="application/json")
@@ -291,10 +291,11 @@ check("页面上可以打开只看图片", st == 200 and out.get("images_only") 
 st, body = call(f"/p/{slug}")
 check("只看图片时文本块和小标题不显示", st == 200 and b"Long shelf life" not in body
       and b"IEC name" not in body and b"Values are typical, not guaranteed" not in body, f"实际 {st}")
-check("只看图片时标题、页脚仍然显示", b"<h1>SMOKE R6P</h1>" in body
-      and b"Carbon Zn/MnO2 Battery" in body and b"Typical values" in body, f"实际 {st}")
+check("只看图片时标题、副标题、页眉小字、页脚也不显示", b"<h1>" not in body
+      and b'class="sub"' not in body and b'class="cat"' not in body and b'class="foot"' not in body
+      and b"Carbon Zn/MnO2 Battery" not in body and b"Typical values" not in body, f"实际 {st}")
 check("只看图片时图片还在（含图注）", b"/img/" in body and b"<figure" in body
-      and b'onlyimg' in body, f"实际 {st}")
+      and b"Real photo" in body and b"onlyimg" in body, f"实际 {st}")
 st, out = jget(f"/admin/api/pages/{pid}")
 check("后台能读回只看图片标记", st == 200 and out["page"].get("images_only") == 1, f"实际 {st}")
 st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
