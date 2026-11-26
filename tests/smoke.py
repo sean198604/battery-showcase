@@ -271,6 +271,31 @@ check("语言切换条在正文上方（右上角）",
       st == 200 and b'class="topbar"' in body
       and body.index(b'class="topbar"') < body.index(b'class="hero"'), f"实际 {st}")
 
+# 6d. 图片库：标出每张图被哪些语言在用，没在用的也要能看原图
+st, lib = jget("/admin/api/images")
+mine = next((i for i in lib.get("images", []) if i["id"] == image_id), None) if image_id else None
+check("图片库里标出这张图在用的语言", mine is not None and sorted(mine.get("langs") or []) == ["en", "es"],
+      f"实际 {str(mine)[:160]}")
+if mine:
+    st, raw = call(f"/img/{mine['token']}/orig")
+    check("在用的图能看原图", st == 200 and raw[:4] in (b"\x89PNG", b"RIFF", b"\xff\xd8"),
+          f"实际 {st} {raw[:4]!r}")
+if image_id:
+    body, ct = multipart(big)
+    st, fresh = jget("/admin/api/images", data=body, ctype=ct)
+    check("再传一张同名图入库", st == 200 and fresh.get("id"), f"实际 {st}")
+    st, lib2 = jget("/admin/api/images")
+    row2 = next((i for i in lib2.get("images", []) if i["id"] == fresh.get("id")), None)
+    check("还没被页面用的图标成未使用", row2 is not None and row2.get("langs") == [], f"实际 {str(row2)[:160]}")
+    if row2:
+        st, raw = call(f"/img/{row2['token']}/orig")
+        check("未使用的图也能看原图", st == 200 and raw[:4] in (b"\x89PNG", b"RIFF", b"\xff\xd8"),
+              f"实际 {st} {raw[:4]!r}")
+    st, out = jget(f"/admin/api/images/{fresh.get('id')}", method="DELETE") if fresh.get("id") else (0, {})
+    check("未使用的图可删除", st == 200, f"实际 {st} {str(out)[:100]}")
+st, out = jget(f"/admin/api/images/{image_id}", method="DELETE") if image_id else (0, {})
+check("在用的图删除被挡住", st == 400, f"实际 {st} {str(out)[:100]}")
+
 # 底部联系方式已删除：后台再传这个字段也不该出现在页面上
 st, out = jget(f"/admin/api/pages/{pid}", method="PUT",
                data=json.dumps({"title": "SMOKE R6P", "contact_text": "Tel +86 13800000000"}).encode(),

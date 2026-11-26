@@ -542,6 +542,19 @@ def list_images(request: Request):
         " (SELECT COUNT(*) FROM pages p WHERE p.cover_image = images.id) AS cover_uses"
         " FROM images ORDER BY id DESC LIMIT 2000"
     )
+    # 图片被哪些语言的页面用到，后台缩略图右上角要标出来
+    used = db.query(
+        "SELECT b.image_id AS image_id, p.lang AS lang FROM blocks b"
+        " JOIN pages p ON p.id = b.page_id WHERE b.image_id IS NOT NULL"
+        " UNION SELECT p.cover_image, p.lang FROM pages p WHERE p.cover_image IS NOT NULL"
+    )
+    langs: dict[int, list[str]] = {}
+    for r in used:
+        langs.setdefault(r["image_id"], [])
+        if r["lang"] not in langs[r["image_id"]]:
+            langs[r["image_id"]].append(r["lang"])
+    for row in rows:
+        row["langs"] = sorted(langs.get(row["id"], []))
     return {"images": rows, "storage_bytes": images.storage_bytes()}
 
 

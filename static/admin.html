@@ -87,8 +87,12 @@ iframe#pv{width:100%;height:min(76vh,760px);border:0;background:#fff;border-radi
  var(--line);position:sticky;bottom:0;background:#fff;border-radius:0 0 10px 10px}
 /* 图片库 */
 .igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
-.icell{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.icell{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff;position:relative}
 .icell img{width:100%;height:110px;object-fit:cover;display:block;background:#eef1f4}
+.icell .lg{position:absolute;top:6px;right:6px;background:rgba(24,34,44,.8);color:#fff;font-size:11px;
+ line-height:1.5;padding:2px 8px;border-radius:10px;max-width:calc(100% - 12px);overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+.icell .lg.none{background:rgba(150,160,170,.85)}
 .icell .n{font-size:11px;color:var(--mut);padding:6px 8px 0;overflow:hidden;text-overflow:ellipsis;
  white-space:nowrap}
 .icell .u{font-size:11px;color:#9aa6b1;padding:0 8px}
@@ -561,6 +565,13 @@ function qrModal(slug,published,title){
 }
 
 /* ---------------- 图片库 / 选择器 ---------------- */
+/* 缩略图右上角标出这张图被哪些语言的页面用到；没被用的标「未使用」 */
+function langBadge(im){
+  const langs=im.langs||[];
+  if(!langs.length)return '<span class="lg none" title="还没有页面在用这张图">未使用</span>';
+  return `<span class="lg" title="用在：${esc(langs.map(langName).join("、"))}">${
+    esc(langs.map(l=>l.toUpperCase()).join(" · "))}</span>`;
+}
 async function loadImages(){
   const d=await api("/admin/api/images");
   allImages=d.images;
@@ -570,12 +581,12 @@ async function loadImages(){
     g.innerHTML='<div class="empty card">图片库里还没有图片。</div>';return}
   g.className="igrid";
   g.innerHTML=allImages.map(im=>`<div class="icell">
+    ${langBadge(im)}
     <img src="/img/${esc(im.token)}/prev" alt="" loading="lazy">
     <div class="n" title="${esc(im.orig_name)}">${esc(im.orig_name)}</div>
     <div class="u">${im.width}×${im.height} · 用于 ${im.uses+im.cover_uses} 处</div>
-    <div class="a">${im.uses+im.cover_uses?
-      `<a class="btn sm" href="/img/${esc(im.token)}/orig" target="_blank">看原图</a>`:
-      `<button class="btn sm dan" data-di="${im.id}">删除</button>`}</div>
+    <div class="a"><a class="btn sm" href="/img/${esc(im.token)}/orig" target="_blank">看原图</a>${
+      im.uses+im.cover_uses?"":` <button class="btn sm dan" data-di="${im.id}">删除</button>`}</div>
   </div>`).join("");
   g.querySelectorAll("[data-di]").forEach(b=>b.onclick=async()=>{
     if(!confirm("删除这张图片？"))return;
@@ -613,6 +624,7 @@ function openPicker(onPick,title){
 function renderPickerGrid(){
   const host=$("#pgrid2");if(!host)return;
   host.innerHTML=allImages.map(im=>`<div class="icell" data-pi="${im.id}" style="cursor:pointer">
+    ${langBadge(im)}
     <img src="/img/${esc(im.token)}/prev" alt="" loading="lazy">
     <div class="n">${esc(im.orig_name)}</div>
     <div class="u">${im.width}×${im.height}</div>
