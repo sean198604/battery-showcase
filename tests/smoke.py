@@ -71,6 +71,11 @@ def multipart(filename, field="file"):
         return head + fh.read() + tail, f"multipart/form-data; boundary={boundary}"
 
 
+def _looks_image(raw: bytes) -> bool:
+    """原图变体按上传时的字节直出，这里只认图片文件头，不认具体格式。"""
+    return raw[:4] in (b"\x89PN", b"RIFF", b"GIF8") or raw[:2] == b"\xff\xd8"
+
+
 def check(name, ok, detail=""):
     print(f"{'PASS' if ok else 'FAIL'}  {name}" + (f"  {detail}" if detail else ""))
     if not ok:
@@ -278,8 +283,8 @@ check("图片库里标出这张图在用的语言", mine is not None and sorted(
       f"实际 {str(mine)[:160]}")
 if mine:
     st, raw = call(f"/img/{mine['token']}/orig")
-    check("在用的图能看原图", st == 200 and raw[:4] in (b"\x89PNG", b"RIFF", b"\xff\xd8"),
-          f"实际 {st} {raw[:4]!r}")
+    check("在用的图能看原图", st == 200 and len(raw) > 1000 and _looks_image(raw),
+          f"实际 {st} {raw[:4]!r} {len(raw)}B")
 if image_id:
     body, ct = multipart(big)
     st, fresh = jget("/admin/api/images", data=body, ctype=ct)
@@ -289,8 +294,8 @@ if image_id:
     check("还没被页面用的图标成未使用", row2 is not None and row2.get("langs") == [], f"实际 {str(row2)[:160]}")
     if row2:
         st, raw = call(f"/img/{row2['token']}/orig")
-        check("未使用的图也能看原图", st == 200 and raw[:4] in (b"\x89PNG", b"RIFF", b"\xff\xd8"),
-              f"实际 {st} {raw[:4]!r}")
+        check("未使用的图也能看原图", st == 200 and len(raw) > 1000 and _looks_image(raw),
+              f"实际 {st} {raw[:4]!r} {len(raw)}B")
     st, out = jget(f"/admin/api/images/{fresh.get('id')}", method="DELETE") if fresh.get("id") else (0, {})
     check("未使用的图可删除", st == 200, f"实际 {st} {str(out)[:100]}")
 st, out = jget(f"/admin/api/images/{image_id}", method="DELETE") if image_id else (0, {})
